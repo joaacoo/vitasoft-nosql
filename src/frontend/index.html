@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>VitaSoft - Gestión de Pagos Masivos</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        .btn { background-color: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        .btn:hover { background-color: #2ecc71; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #2c3e50; color: white; }
+        .alert { background-color: #e74c3c; color: white; padding: 10px; border-radius: 4px; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VitaSoft - Procesamiento de Pagos</h1>
+        <p>Cargue el archivo exportado del ERP (XLSX/CSV) para generar el lote y detectar anomalías.</p>
+        
+        <input type="file" id="fileUpload" accept=".csv, .xlsx">
+        <button class="btn" onclick="simularProceso()">Procesar Lote</button>
+
+        <div id="alertaFraude" class="alert">
+            ⚠️ <strong>Alerta del Motor de Grafo:</strong> Se detectaron 2 proveedores compartiendo el mismo CBU (Consultora Alfa y Servicios Beta).
+        </div>
+
+        <table id="resultados" style="display:none;">
+            <thead>
+                <tr>
+                    <th>Estado</th>
+                    <th>Registros</th>
+                    <th>Total Procesado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Procesado en MongoDB</td>
+                    <td>8</td>
+                    <td>$ 3,215,500.50</td>
+                    <td><button class="btn" style="background:#2980b9;">Ver Grafo</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function simularProceso() {
+            // En un entorno real, esto haría un fetch() al backend Python
+            setTimeout(() => {
+                document.getElementById('resultados').style.display = 'table';
+                document.setTimeout(() => {
+                    document.getElementById('alertaFraude').style.display = 'block';
+                }, 1000);
+            }, 800);
+        }
+    </script>
+</body>
+</html>
