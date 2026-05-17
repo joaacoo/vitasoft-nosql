@@ -34,10 +34,12 @@ def sync_to_neo4j(proveedores):
     
     MERGE (c:CBU {numero: prov.ultimo_cbu})
     MERGE (d:Direccion {calle: prov.ultima_direccion})
+    MERGE (b:Banco {nombre: prov.ultimo_banco})
     
     // Crear Relaciones
     MERGE (p)-[:TIENE_CBU]->(c)
     MERGE (p)-[:DOMICILIADO_EN]->(d)
+    MERGE (p)-[:OPERA_CON]->(b)
     """
     
     with driver.session() as session:

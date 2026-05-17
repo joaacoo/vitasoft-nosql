@@ -38,6 +38,8 @@ def detectar_fraudes_neo4j():
     driver.close()
     return alertas
 
+from src.etl.exportador_txt import generar_txt_bancario
+
 @app.post("/api/procesar")
 async def procesar_lote(file: UploadFile = File(...)):
     # Guardar el archivo temporalmente
@@ -54,7 +56,10 @@ async def procesar_lote(file: UploadFile = File(...)):
     total_monto = datos_limpios['monto'].sum()
     cantidad_registros = len(datos_limpios)
     
-    load_to_mongodb(datos_limpios)
+    id_lote = load_to_mongodb(datos_limpios)
+    
+    # 1.5 Exportar a TXT
+    ruta_txt = generar_txt_bancario(id_lote)
     
     # 2. Sync a Neo4j
     datos_mongo = get_latest_data_from_mongo()
@@ -70,6 +75,7 @@ async def procesar_lote(file: UploadFile = File(...)):
         "status": "success",
         "registros": cantidad_registros,
         "total_monto": float(total_monto),
+        "archivo_txt": ruta_txt,
         "alertas": alertas
     }
 

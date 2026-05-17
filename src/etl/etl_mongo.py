@@ -45,7 +45,14 @@ def load_to_mongodb(df):
         "fecha_proceso": fecha_proceso,
         "cantidad_registros": len(df),
         "estado": "PROCESADO",
-        "pagos": []
+        "pagos": [],
+        "historial": [
+            {
+                "fecha": fecha_proceso,
+                "accion": "procesamiento",
+                "detalle": "Lote ingerido y procesado desde archivo fuente"
+            }
+        ]
     }
     
     for _, row in df.iterrows():
@@ -67,6 +74,7 @@ def load_to_mongodb(df):
                 "nombre": row['proveedor'],
                 "ultima_direccion": row['direccion'],
                 "ultimo_cbu": row['cbu'],
+                "ultimo_banco": row['banco'],
                 "fecha_actualizacion": fecha_proceso
             }},
             upsert=True
@@ -76,10 +84,11 @@ def load_to_mongodb(df):
     db.lotes_pago.insert_one(lote_doc)
     print(f"¡Éxito! Lote {id_lote} cargado en MongoDB con {len(df)} registros.")
     client.close()
+    return id_lote
 
 if __name__ == "__main__":
     # RUTA CORREGIDA: Busca directamente en la carpeta data desde donde estás parado
-    filepath = r"C:\Users\joaco\Downloads\vitasoft-nosql-main\data\pagos_input.xlsx"
+    filepath = r"C:\Users\PC\Downloads\vitasoft-nosql\data\pagos_input.xlsx"
     
     datos = extract_data(filepath)
     if datos is not None:
