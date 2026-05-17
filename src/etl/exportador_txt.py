@@ -4,7 +4,7 @@ from pymongo import MongoClient
 # Configuración MongoDB
 MONGO_URI = "mongodb://localhost:27017/"
 DB_NAME = "vitasoft_db"
-OUTPUT_DIR = r"C:\Users\PC\Downloads\vitasoft-nosql\data\output"
+OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data", "output")
 
 def generar_txt_bancario(id_lote: str):
     """
