@@ -1,0 +1,78 @@
+version: '3.8'
+
+# ---------------------------------------------------------
+# INFRAESTRUCTURA DE PRODUCCIÓN (ESCALABILIDAD) - ETAPA FINAL
+# ---------------------------------------------------------
+# Este archivo define la topología distribuida para cumplir con 
+# el crecimiento proyectado del 5% al 10% mensual.
+# NO EJECUTAR EN LOCAL SIN AL MENOS 16GB DE RAM.
+
+services:
+  # ==========================================
+  # MONGODB SHARDED CLUSTER
+  # ==========================================
+  
+  # 1. Config Server (Guarda el mapa de dónde está cada dato)
+  mongo-configsvr:
+    image: mongo:6.0
+    container_name: vitasoft_mongo_config
+    command: mongod --configsvr --replSet configRS --bind_ip_all
+    ports:
+      - "27019:27019"
+
+  # 2. Shard 1 (Primera mitad de los datos)
+  mongo-shard1:
+    image: mongo:6.0
+    container_name: vitasoft_mongo_shard1
+    command: mongod --shardsvr --replSet shard1RS --bind_ip_all
+    ports:
+      - "27018:27018"
+
+  # 3. Shard 2 (Segunda mitad de los datos)
+  mongo-shard2:
+    image: mongo:6.0
+    container_name: vitasoft_mongo_shard2
+    command: mongod --shardsvr --replSet shard2RS --bind_ip_all
+    ports:
+      - "27020:27018"
+
+  # 4. Router (Mongos - Donde se conecta Python)
+  mongos-router:
+    image: mongo:6.0
+    container_name: vitasoft_mongos_router
+    command: mongos --configdb configRS/mongo-configsvr:27019 --bind_ip_all
+    ports:
+      - "27017:27017"
+    depends_on:
+      - mongo-configsvr
+      - mongo-shard1
+      - mongo-shard2
+
+  # ==========================================
+  # NEO4J CAUSAL CLUSTER (Core & Read Replicas)
+  # ==========================================
+
+  # Nodo Líder (Recibe escrituras del Sync en Python)
+  neo4j-core:
+    image: neo4j:enterprise
+    container_name: vitasoft_neo4j_core
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/vitasoft2026
+      - NEO4J_server_mode=CORE
+      - NEO4J_server_default__listen__address=0.0.0.0
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+
+  # Réplica de Lectura 1 (Atiende las consultas de Riesgo/Fraude)
+  neo4j-read-replica1:
+    image: neo4j:enterprise
+    container_name: vitasoft_neo4j_replica1
+    environment:
+      - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes
+      - NEO4J_AUTH=neo4j/vitasoft2026
+      - NEO4J_server_mode=READ_REPLICA
+      - NEO4J_dbms_cluster_discovery_endpoints=neo4j-core:5000
+    depends_on:
+      - neo4j-core
