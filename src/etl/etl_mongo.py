@@ -3,7 +3,7 @@ from pymongo import MongoClient
 import datetime
 import uuid
 
-# Conectarse al MongoDB que levantaste con Docker
+# Configuración MongoDB
 MONGO_URI = "mongodb://localhost:27017/"
 DB_NAME = "vitasoft_db"
 
@@ -25,7 +25,12 @@ def transform_data(df):
     df['proveedor'] = df['proveedor'].str.strip().str.upper()
     df['cuit'] = df['cuit'].astype(str).str.strip()
     df['cbu'] = df['cbu'].astype(str).str.strip()
+    df['banco'] = df['banco'].str.strip().str.upper()
+    df['direccion'] = df['direccion'].str.strip().str.upper()
     df['monto'] = pd.to_numeric(df['monto'], errors='coerce')
+    
+    # Eliminar nulos críticos
+    df = df.dropna(subset=['cuit', 'cbu', 'monto'])
     return df
 
 def load_to_mongodb(df):
@@ -55,7 +60,7 @@ def load_to_mongodb(df):
         }
         lote_doc["pagos"].append(pago)
 
-        # Upsert en colección de proveedores (Clave para que Neo4j funcione después)
+        # Upsert en colección de proveedores para mantener padrón actualizado y que Neo4j funcione después
         db.proveedores.update_one(
             {"cuit": row['cuit']},
             {"$set": {
@@ -67,7 +72,7 @@ def load_to_mongodb(df):
             upsert=True
         )
 
-    # Insertamos todo el lote
+    # Insertamos todo el lote transaccional
     db.lotes_pago.insert_one(lote_doc)
     print(f"¡Éxito! Lote {id_lote} cargado en MongoDB con {len(df)} registros.")
     client.close()
