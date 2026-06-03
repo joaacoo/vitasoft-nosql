@@ -559,7 +559,7 @@
                         alertaDiv.style.display = 'block';
                         let alertasHtml = '';
                         data.alertas.forEach(alerta => {
-                            alertasHtml += `<div class="alert-item">Anomalía CBU: <b>${alerta.prov1}</b> y <b>${alerta.prov2}</b> comparten la cuenta <b>${alerta.cbu}</b>.</div>`;
+                            alertasHtml += `<div class="alert-item">Anomalía: <b>${alerta.prov1}</b> y <b>${alerta.prov2}</b> comparten la igualdad de la cuenta <b>${alerta.cbu}</b>.</div>`;
                         });
                         alertaContenido.innerHTML = alertasHtml;
                     } else {

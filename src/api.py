@@ -18,18 +18,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def detectar_fraudes_neo4j():
+def detectar_fraudes_neo4j(cuits_lote=None):
     driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
     alertas = []
     
-    query = """
-    MATCH (p1:Proveedor)-[:TIENE_CBU]->(c:CBU)<-[:TIENE_CBU]-(p2:Proveedor)
-    WHERE p1.cuit < p2.cuit
-    RETURN p1.nombre AS prov1, p2.nombre AS prov2, c.numero AS cbu
-    """
-    
+    if cuits_lote:
+        query = """
+        MATCH (p1:Proveedor)-[:TIENE_CBU]->(c:CBU)<-[:TIENE_CBU]-(p2:Proveedor)
+        WHERE p1.cuit < p2.cuit AND (p1.cuit IN $cuits AND p2.cuit IN $cuits)
+        RETURN p1.nombre AS prov1, p2.nombre AS prov2, c.numero AS cbu
+        """
+        params = {"cuits": cuits_lote}
+    else:
+        query = """
+        MATCH (p1:Proveedor)-[:TIENE_CBU]->(c:CBU)<-[:TIENE_CBU]-(p2:Proveedor)
+        WHERE p1.cuit < p2.cuit
+        RETURN p1.nombre AS prov1, p2.nombre AS prov2, c.numero AS cbu
+        """
+        params = {}
+        
     with driver.session() as session:
-        result = session.run(query)
+        result = session.run(query, params)
         for record in result:
             alertas.append({
                 "prov1": record["prov1"],
@@ -53,9 +62,12 @@ async def procesar_lote(file: UploadFile = File(...)):
     if datos is None:
         return {"error": "No se pudo leer el archivo. Asegúrate de que sea CSV o XLSX."}
         
+    registros_recibidos = len(datos)
     datos_limpios = transform_data(datos)
+    
     total_monto = datos_limpios['monto'].sum()
     cantidad_registros = len(datos_limpios)
+    registros_rechazados = registros_recibidos - cantidad_registros
     
     id_lote = load_to_mongodb(datos_limpios)
     
@@ -66,8 +78,9 @@ async def procesar_lote(file: UploadFile = File(...)):
         datos_mongo = get_latest_data_from_mongo()
         sync_to_neo4j(datos_mongo)
         
-        # 3. Consultar fraudes en Neo4j (antes de exportar)
-        alertas = detectar_fraudes_neo4j()
+        # 3. Consultar fraudes en Neo4j limitando al lote actual
+        cuits_lote = datos_limpios['cuit'].tolist() if not datos_limpios.empty else []
+        alertas = detectar_fraudes_neo4j(cuits_lote)
     except Exception as e:
         print(f"Advertencia: No se pudo sincronizar o consultar Neo4j ({e}). Flujo continúa.")
         neo4j_online = False
@@ -87,6 +100,8 @@ async def procesar_lote(file: UploadFile = File(...)):
     return {
         "status": "success",
         "registros": cantidad_registros,
+        "registros_recibidos": registros_recibidos,
+        "registros_rechazados": registros_rechazados,
         "total_monto": float(total_monto),
         "archivo_txt": ruta_txt,
         "alertas": alertas,
