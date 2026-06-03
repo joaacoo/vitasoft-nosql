@@ -1,5 +1,6 @@
 import os
 from pymongo import MongoClient
+import datetime
 
 # Configuración MongoDB
 MONGO_URI = "mongodb://localhost:27017/"
@@ -56,7 +57,7 @@ def generar_txt_bancario(id_lote: str):
         {"id_lote": id_lote},
         {"$push": {
             "historial": {
-                "fecha": lote["fecha_proceso"],  # Se podría usar datetime.datetime.now()
+                "fecha": datetime.datetime.now(),  # Modificado: Se usa la fecha real de exportación
                 "accion": "exportacion_txt",
                 "detalle": f"Archivo TXT generado: {filename}"
             }

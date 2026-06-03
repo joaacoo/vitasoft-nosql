@@ -24,7 +24,7 @@ def detectar_fraudes_neo4j():
     
     query = """
     MATCH (p1:Proveedor)-[:TIENE_CBU]->(c:CBU)<-[:TIENE_CBU]-(p2:Proveedor)
-    WHERE id(p1) < id(p2)
+    WHERE p1.cuit < p2.cuit
     RETURN p1.nombre AS prov1, p2.nombre AS prov2, c.numero AS cbu
     """
     
@@ -59,15 +59,27 @@ async def procesar_lote(file: UploadFile = File(...)):
     
     id_lote = load_to_mongodb(datos_limpios)
     
-    # 1.5 Exportar a TXT
-    ruta_txt = generar_txt_bancario(id_lote)
+    # 2. Sync a Neo4j (Tolerancia a fallos simulada con try-except)
+    alertas = []
+    neo4j_online = True
+    try:
+        datos_mongo = get_latest_data_from_mongo()
+        sync_to_neo4j(datos_mongo)
+        
+        # 3. Consultar fraudes en Neo4j (antes de exportar)
+        alertas = detectar_fraudes_neo4j()
+    except Exception as e:
+        print(f"Advertencia: No se pudo sincronizar o consultar Neo4j ({e}). Flujo continúa.")
+        neo4j_online = False
     
-    # 2. Sync a Neo4j
-    datos_mongo = get_latest_data_from_mongo()
-    sync_to_neo4j(datos_mongo)
-    
-    # 3. Consultar fraudes en Neo4j
-    alertas = detectar_fraudes_neo4j()
+    # 4. Decisión de exportación basada en fraudes
+    # Si hay alertas críticas, podríamos evitar la exportación.
+    # En este caso lo exportamos pero lo dejamos documentado en la API.
+    if alertas:
+        print(f"ALERTA: Se detectaron {len(alertas)} vínculos sospechosos. Revisar antes de autorizar el pago.")
+        ruta_txt = generar_txt_bancario(id_lote) # Se genera de todos modos para que el usuario decida
+    else:
+        ruta_txt = generar_txt_bancario(id_lote)
     
     # Limpiar archivo temporal
     os.remove(temp_path)
@@ -77,7 +89,8 @@ async def procesar_lote(file: UploadFile = File(...)):
         "registros": cantidad_registros,
         "total_monto": float(total_monto),
         "archivo_txt": ruta_txt,
-        "alertas": alertas
+        "alertas": alertas,
+        "neo4j_status": "online" if neo4j_online else "offline"
     }
 
 if __name__ == "__main__":
