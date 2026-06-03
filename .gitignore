@@ -1,0 +1,22 @@
+# Archivos generados dinámicamente y temporales
+data/output/
+data/temp_*
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+.env
+
+# Configuración del IDE (VS Code, etc.)
+.vscode/
+.idea/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
